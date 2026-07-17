@@ -1,0 +1,1163 @@
+Anda bertindak sebagai Senior Software Architect, Senior C# Engineer,
+MySQL Database Architect, Desktop UX Engineer, QA Engineer, dan
+Application Security Engineer.
+
+Tugas Anda adalah membangun aplikasi production-grade bernama:
+
+COMPANION RENTAL MANAGEMENT SYSTEM
+
+Aplikasi merupakan pengembangan total dari aplikasi tutorial lama
+“Aplikasi Pacar Sewaan dengan C# dan MySQL” yang sebelumnya hanya
+mempunyai fungsi CRUD sederhana untuk nama pemesan, jenis kelamin,
+nama pacar sewaan, alasan sewa, lama sewa, honor per hari, total,
+tampilkan, tambah, ubah, dan hapus.
+
+Jangan menyalin arsitektur lama. Sistem lama hanya boleh digunakan
+sebagai referensi konsep awal. Bangun ulang aplikasi memakai arsitektur
+bersih, aman, modular, teruji, dan dapat dikembangkan.
+
+==================================================
+A. TUJUAN PRODUK
+==================================================
+
+Bangun aplikasi desktop Windows untuk mengelola layanan companion atau
+pendamping sosial nonseksual, seperti teman menghadiri acara, teman
+makan, pendamping perjalanan, pendamping acara keluarga, dan kegiatan
+sosial lain yang legal.
+
+Seluruh pelanggan dan companion wajib berusia minimal 18 tahun.
+Sistem tidak boleh memfasilitasi layanan seksual, aktivitas ilegal,
+eksploitasi, kekerasan, atau aktivitas tanpa persetujuan.
+
+Aplikasi harus mengelola:
+
+1. Authentication.
+2. User dan role.
+3. Permission.
+4. Pelanggan.
+5. Companion/talent.
+6. Dokumen dan foto talent.
+7. Kategori layanan.
+8. Layanan dan tarif.
+9. Jadwal ketersediaan.
+10. Booking.
+11. Deteksi bentrok jadwal.
+12. Pricing engine.
+13. Pembayaran.
+14. Deposit.
+15. Refund.
+16. Pembatalan.
+17. Check-in dan check-out.
+18. Review.
+19. Insiden.
+20. Dashboard.
+21. Laporan.
+22. Audit log.
+23. Pengaturan.
+24. Backup dan restore.
+
+==================================================
+B. STACK TEKNOLOGI
+==================================================
+
+Gunakan baseline berikut:
+
+- C#.
+- .NET 10 LTS.
+- Windows Forms.
+- MySQL 8.4 LTS.
+- Dapper.
+- MySQL-compatible ADO.NET provider.
+- Microsoft.Extensions.DependencyInjection.
+- Microsoft.Extensions.Configuration.
+- Microsoft.Extensions.Logging atau Serilog.
+- FluentValidation.
+- xUnit.
+- ClosedXML untuk Excel.
+- Library PDF yang kompatibel untuk invoice dan laporan.
+
+Pilih versi package stabil yang saling kompatibel.
+Pin semua package version secara eksplisit.
+Jangan menggunakan prerelease package.
+Catat seluruh package pada dokumentasi.
+
+==================================================
+C. ARSITEKTUR
+==================================================
+
+Gunakan Clean Architecture dengan solution:
+
+CompanionRental.sln
+
+src/
+- CompanionRental.Domain
+- CompanionRental.Application
+- CompanionRental.Infrastructure
+- CompanionRental.WinForms
+
+tests/
+- CompanionRental.Domain.Tests
+- CompanionRental.Application.Tests
+- CompanionRental.Infrastructure.Tests
+
+Aturan dependency:
+
+Domain:
+- Tidak bergantung pada project lain.
+- Tidak mengenal WinForms.
+- Tidak mengenal MySQL.
+- Tidak mengenal Dapper.
+
+Application:
+- Bergantung hanya pada Domain.
+- Berisi interface repository, DTO, validator, service, dan use case.
+
+Infrastructure:
+- Bergantung pada Application dan Domain.
+- Mengimplementasikan repository, database, file storage, report,
+  logging, backup, dan configuration.
+
+WinForms:
+- Bergantung pada Application.
+- Infrastructure hanya dihubungkan melalui dependency injection
+  pada composition root.
+- Form tidak boleh menjalankan SQL.
+
+Dilarang:
+
+- SQL di Form.
+- Connection string hardcoded.
+- Password plaintext.
+- Static global database connection.
+- Penggabungan string untuk query.
+- Business logic di event handler.
+- Catch Exception kosong.
+- Menampilkan stack trace kepada end user.
+- Menggunakan float atau double untuk uang.
+- Menggunakan Int16 untuk harga atau durasi.
+- Menghapus transaksi secara permanen.
+
+==================================================
+D. STRUKTUR DOMAIN
+==================================================
+
+Buat entity:
+
+- User
+- Role
+- Permission
+- Customer
+- Companion
+- CompanionDocument
+- CompanionPhoto
+- ServiceCategory
+- Service
+- CompanionService
+- AvailabilitySlot
+- Booking
+- BookingItem
+- BookingStatusHistory
+- Payment
+- Refund
+- PromoCode
+- PromoUsage
+- Review
+- Incident
+- AuditLog
+- AppSetting
+
+Gunakan Guid sebagai ID aplikasi.
+Simpan Guid ke MySQL menggunakan bentuk yang konsisten.
+Jelaskan pilihan penyimpanan Guid yang digunakan.
+
+Gunakan enum:
+
+BookingStatus:
+- Draft
+- PendingConfirmation
+- AwaitingPayment
+- Confirmed
+- CheckedIn
+- InProgress
+- Completed
+- Cancelled
+- NoShow
+- Disputed
+- Refunded
+
+PaymentStatus:
+- Unpaid
+- PartiallyPaid
+- Paid
+- Failed
+- Refunded
+
+CompanionStatus:
+- PendingVerification
+- Active
+- Inactive
+- Suspended
+- Blacklisted
+
+AvailabilityType:
+- Available
+- Unavailable
+- Leave
+- Reserved
+
+IncidentSeverity:
+- Low
+- Medium
+- High
+- Critical
+
+Semua enum harus mempunyai mapping database yang eksplisit.
+Jangan bergantung pada urutan integer enum tanpa dokumentasi.
+
+==================================================
+E. DATABASE
+==================================================
+
+Buat:
+
+- database/schema.sql
+- database/seed.sql
+- database/views.sql
+- database/indexes.sql
+
+Gunakan:
+
+- InnoDB.
+- utf8mb4.
+- Foreign key.
+- Unique constraint.
+- Check constraint apabila didukung.
+- CreatedAt.
+- UpdatedAt.
+- CreatedBy.
+- UpdatedBy.
+- Soft delete untuk data yang sesuai.
+
+Money:
+DECIMAL(18,2)
+
+Tanggal transaksi:
+DATETIME
+
+Tanggal lahir:
+DATE
+
+Teks panjang:
+TEXT
+
+Status:
+VARCHAR dengan mapping enum terkontrol.
+
+Buat tabel:
+
+users
+roles
+permissions
+role_permissions
+customers
+companions
+companion_documents
+companion_photos
+service_categories
+services
+companion_services
+availability_slots
+bookings
+booking_items
+booking_status_histories
+payments
+refunds
+promo_codes
+promo_usages
+reviews
+incidents
+audit_logs
+app_settings
+
+Buat foreign key dan index yang tepat.
+
+Index minimum:
+
+- users.username unique
+- users.email unique
+- customers.customer_code unique
+- companions.companion_code unique
+- services.service_code unique
+- bookings.booking_number unique
+- bookings(customer_id)
+- bookings(companion_id, start_datetime, end_datetime, status)
+- bookings(status, start_datetime)
+- payments(booking_id)
+- incidents(status, severity)
+- audit_logs(entity_type, entity_id, created_at)
+
+Seed data:
+
+Roles:
+- SuperAdmin
+- AdminOperational
+- Finance
+- TalentCoordinator
+- Viewer
+
+Buat permission granular untuk setiap modul dan tindakan.
+
+Buat satu akun development admin.
+Password development tidak boleh ditanam di source code.
+Gunakan environment variable atau proses setup pertama.
+
+==================================================
+F. AUTHENTICATION DAN SECURITY
+==================================================
+
+Implementasikan:
+
+1. Login dengan username atau email.
+2. Password hashing aman dengan salt.
+3. Password verification.
+4. Account lockout.
+5. Failed login counter.
+6. Session timeout.
+7. Change password.
+8. Force password change.
+9. User activation/deactivation.
+10. Audit login berhasil dan gagal.
+11. Permission checking pada application service.
+12. Penyembunyian menu berdasarkan permission.
+13. Enkripsi data identitas sensitif.
+14. Masking data identitas pada UI.
+15. Secure configuration.
+16. Sanitasi nama file upload.
+17. Pembatasan ekstensi dan ukuran file.
+18. Structured logging.
+19. Global exception handler.
+20. Pesan error ramah pengguna.
+
+Buat akun database khusus aplikasi.
+Jangan menggunakan akun root.
+
+Semua query wajib parameterized.
+Dilarang membuat SQL melalui interpolasi nilai input pengguna.
+
+==================================================
+G. CUSTOMER MODULE
+==================================================
+
+Customer fields:
+
+- Id
+- CustomerCode
+- FullName
+- IdentityType
+- IdentityNumberEncrypted
+- BirthDate
+- Gender
+- Phone
+- WhatsApp
+- Email
+- Address
+- City
+- EmergencyContactName
+- EmergencyContactPhone
+- Notes
+- IsBlacklisted
+- BlacklistReason
+- IsActive
+- CreatedAt
+- UpdatedAt
+- CreatedBy
+- UpdatedBy
+
+Business rules:
+
+- Umur minimal 18 tahun.
+- CustomerCode dibuat otomatis.
+- Email divalidasi jika diisi.
+- Nomor telepon dinormalisasi.
+- Customer blacklist tidak dapat membuat booking baru.
+- Data transaksi lama tetap dipertahankan saat customer dinonaktifkan.
+- Nomor identitas tidak ditampilkan penuh.
+- Duplikasi pelanggan diperiksa berdasarkan identitas, telepon,
+  atau email.
+
+Fitur:
+
+- List.
+- Search.
+- Filter.
+- Detail.
+- Create.
+- Update.
+- Deactivate.
+- Blacklist.
+- Riwayat booking.
+- Riwayat pembayaran.
+- Pagination.
+- Export sesuai permission.
+
+==================================================
+H. COMPANION MODULE
+==================================================
+
+Companion fields:
+
+- Id
+- CompanionCode
+- DisplayName
+- LegalName
+- BirthDate
+- Gender
+- Phone
+- Email
+- City
+- Bio
+- Skills
+- Languages
+- BaseHourlyRate
+- AverageRating
+- TotalReviews
+- VerificationStatus
+- EmploymentStatus
+- EmergencyContactName
+- EmergencyContactPhone
+- IsActive
+- CreatedAt
+- UpdatedAt
+
+Business rules:
+
+- Usia minimal 18 tahun.
+- Companion wajib diverifikasi sebelum menerima booking.
+- Companion suspended tidak dapat ditugaskan.
+- Tarif tidak boleh negatif.
+- Rating berada pada rentang 1 sampai 5.
+- AverageRating dihitung dari review valid.
+- Tidak boleh menghapus companion yang memiliki transaksi.
+- Dokumen sensitif hanya dapat dilihat oleh role berizin.
+
+==================================================
+I. SERVICE MODULE
+==================================================
+
+Service fields:
+
+- ServiceCode
+- CategoryId
+- ServiceName
+- Description
+- PricingUnit
+- BasePrice
+- MinimumDurationMinutes
+- MaximumDurationMinutes
+- MinimumDepositPercentage
+- IsActive
+
+PricingUnit:
+
+- Hour
+- Session
+- Day
+- Fixed
+
+Aturan:
+
+- BasePrice >= 0.
+- MinimumDuration > 0.
+- MaximumDuration >= MinimumDuration.
+- Deposit percentage antara 0 dan 100.
+- Layanan tidak aktif tidak dapat dipakai untuk booking baru.
+- Transaksi lama tetap menggunakan snapshot layanan.
+
+==================================================
+J. AVAILABILITY MODULE
+==================================================
+
+Buat calendar view:
+
+- Daily.
+- Weekly.
+- Monthly.
+
+Buat slot:
+
+- Available.
+- Unavailable.
+- Leave.
+- Reserved.
+
+Aturan overlap:
+
+NewStart < ExistingEnd
+AND
+NewEnd > ExistingStart
+
+Cek overlap terhadap:
+
+- Availability slot yang melarang booking.
+- Booking berstatus Confirmed.
+- Booking berstatus CheckedIn.
+- Booking berstatus InProgress.
+- Booking AwaitingPayment jika slot sedang ditahan.
+
+Sediakan configurable buffer sebelum dan setelah booking.
+
+Cegah race condition saat dua admin membuat booking untuk talent
+yang sama pada waktu yang bersamaan.
+
+Gunakan database transaction dan pemeriksaan ulang availability
+sebelum booking dikonfirmasi.
+
+==================================================
+K. BOOKING MODULE
+==================================================
+
+Booking fields:
+
+- BookingNumber
+- CustomerId
+- CompanionId
+- ServiceId
+- StartDateTime
+- EndDateTime
+- DurationMinutes
+- LocationName
+- LocationAddress
+- MeetingPoint
+- EventPurpose
+- DressCode
+- CustomerNotes
+- InternalNotes
+- Status
+- PaymentStatus
+- CurrencyCode
+- BaseAmount
+- AdditionalAmount
+- TransportAmount
+- DiscountAmount
+- TaxAmount
+- GrandTotal
+- PaidAmount
+- RefundedAmount
+- RemainingAmount
+- CancellationReason
+- CancelledAt
+- CompletedAt
+- CreatedBy
+- CreatedAt
+- UpdatedAt
+
+Booking number format:
+
+BKG-yyyyMMdd-sequence
+
+Contoh:
+BKG-20260717-0001
+
+Pastikan sequence aman terhadap concurrency.
+
+Implementasikan state machine.
+Jangan mengubah status booking secara langsung dari Form.
+
+Buat BookingWorkflowService dengan method:
+
+- SubmitForConfirmation
+- MarkAwaitingPayment
+- Confirm
+- CheckIn
+- Start
+- Complete
+- Cancel
+- MarkNoShow
+- RaiseDispute
+- ResolveDispute
+- Refund
+
+Setiap transisi harus:
+
+1. Memeriksa status awal.
+2. Memeriksa permission.
+3. Memeriksa business rule.
+4. Memperbarui booking.
+5. Menambahkan status history.
+6. Menambahkan audit log.
+7. Dilakukan dalam satu database transaction.
+
+==================================================
+L. PRICING ENGINE
+==================================================
+
+Buat IPricingService dan PricingService.
+
+Input:
+
+- Service.
+- Companion.
+- Start time.
+- End time.
+- Location.
+- Add-on.
+- Promo.
+- Tax configuration.
+
+Output:
+
+- DurationMinutes.
+- BaseAmount.
+- CompanionAdjustment.
+- AdditionalAmount.
+- TransportAmount.
+- DiscountAmount.
+- TaxAmount.
+- DepositAmount.
+- GrandTotal.
+- PricingBreakdown.
+
+Gunakan decimal.
+
+Jangan percaya angka total dari UI.
+Seluruh total harus dihitung ulang pada application layer.
+
+Simpan snapshot:
+
+- ServiceNameSnapshot
+- PricingUnitSnapshot
+- UnitPriceSnapshot
+- CompanionRateSnapshot
+- TaxRateSnapshot
+- CancellationPolicySnapshot
+
+Tambahkan unit test untuk:
+
+- Tarif per jam.
+- Tarif per hari.
+- Tarif tetap.
+- Durasi pecahan.
+- Diskon nominal.
+- Diskon persentase.
+- Maksimum diskon.
+- Pajak.
+- Deposit.
+- Promo kedaluwarsa.
+- Promo melebihi kuota.
+- Nilai negatif.
+- Pembulatan.
+
+==================================================
+M. PAYMENT MODULE
+==================================================
+
+Payment fields:
+
+- PaymentNumber
+- BookingId
+- PaymentDate
+- PaymentMethod
+- Amount
+- ReferenceNumber
+- ProofFilePath
+- Status
+- VerifiedBy
+- VerifiedAt
+- Notes
+- CreatedBy
+- CreatedAt
+
+Payment methods:
+
+- Cash
+- BankTransfer
+- QRIS
+- EWallet
+- Card
+- Other
+
+Aturan:
+
+- Amount > 0.
+- Pembayaran tidak boleh melebihi jumlah yang masih harus dibayar,
+  kecuali terdapat mekanisme overpayment yang eksplisit.
+- Pembayaran belum terverifikasi tidak menambah PaidAmount.
+- Payment yang sudah direfund tidak boleh direfund dua kali.
+- Refund tidak boleh melebihi pembayaran valid.
+- Perubahan PaidAmount, RefundedAmount, RemainingAmount, dan
+  PaymentStatus harus berada dalam satu transaction.
+- Semua payment menghasilkan audit log.
+
+Buat invoice dan kuitansi PDF.
+
+==================================================
+N. CANCELLATION
+==================================================
+
+Buat cancellation policy configurable:
+
+Contoh rule:
+
+- Lebih dari 48 jam: tidak ada biaya.
+- 24 sampai 48 jam: 25%.
+- 6 sampai 24 jam: 50%.
+- Kurang dari 6 jam: 100%.
+
+Jangan hardcode aturan tersebut di Form.
+Simpan policy melalui configuration atau tabel.
+
+Saat cancel:
+
+1. Validasi status.
+2. Validasi permission.
+3. Simpan alasan.
+4. Hitung cancellation fee.
+5. Hitung refundable amount.
+6. Ubah status.
+7. Lepaskan availability.
+8. Buat refund request jika perlu.
+9. Catat history.
+10. Catat audit log.
+
+==================================================
+O. CHECK-IN DAN CHECK-OUT
+==================================================
+
+Check-in hanya boleh dilakukan ketika:
+
+- Booking berstatus Confirmed.
+- Tanggal sesuai toleransi konfigurasi.
+- Minimum payment terpenuhi.
+- Customer tidak diblacklist setelah booking dikonfirmasi.
+- Companion masih aktif.
+- Tidak terdapat booking aktif yang bentrok.
+
+Simpan:
+
+- CheckInAt
+- CheckInBy
+- CheckOutAt
+- CheckOutBy
+- ActualDurationMinutes
+- CompletionNotes
+
+Jika actual duration menambah biaya, tampilkan preview biaya tambahan
+dan minta konfirmasi pengguna berizin.
+
+==================================================
+P. REVIEW DAN INCIDENT
+==================================================
+
+Review hanya dapat dibuat untuk booking Completed.
+
+Rating:
+1 sampai 5.
+
+Update AverageRating dan TotalReviews secara konsisten.
+
+Incident dapat dibuat ketika booking berlangsung atau selesai.
+
+Incident fields:
+
+- IncidentNumber
+- BookingId
+- ReportedBy
+- IncidentType
+- Severity
+- Description
+- Location
+- Status
+- AssignedTo
+- ResolutionNotes
+- ResolvedAt
+- CreatedAt
+
+Severity Critical harus tampil sebagai alert pada dashboard.
+
+==================================================
+Q. AUDIT LOG
+==================================================
+
+Audit semua aksi penting:
+
+- Login.
+- Failed login.
+- Create.
+- Update.
+- Status change.
+- Blacklist.
+- Payment verification.
+- Refund.
+- Cancellation.
+- Check-in.
+- Check-out.
+- Export.
+- Backup.
+- Restore.
+- User permission changes.
+
+Audit log menyimpan:
+
+- UserId.
+- Action.
+- Module.
+- EntityType.
+- EntityId.
+- OldValuesJson.
+- NewValuesJson.
+- MachineName.
+- CreatedAt.
+
+Jangan menyimpan:
+
+- Password.
+- Password hash.
+- Full identity number.
+- Secret key.
+- Connection string.
+
+==================================================
+R. UI/UX
+==================================================
+
+Gunakan desain desktop modern, bersih, profesional, dan konsisten.
+
+Main layout:
+
+- Top bar.
+- Sidebar.
+- Content area.
+- User menu.
+- Notification indicator.
+- Connection status.
+
+Menu:
+
+- Dashboard
+- Booking
+- Kalender
+- Pelanggan
+- Talent
+- Layanan
+- Pembayaran
+- Promo
+- Review
+- Insiden
+- Laporan
+- Pengguna
+- Audit Log
+- Pengaturan
+
+Standar setiap list:
+
+- Judul.
+- Add button.
+- Search.
+- Filter.
+- Reset.
+- DataGridView.
+- Pagination.
+- Row action.
+- Loading.
+- Empty state.
+- Error state.
+- Refresh.
+- Export.
+
+Gunakan UserControl untuk halaman utama.
+Gunakan dialog khusus untuk konfirmasi dan error.
+Jangan membuat semua halaman dalam satu Form raksasa.
+
+Form booking harus dibagi menjadi section:
+
+1. Customer.
+2. Service.
+3. Schedule.
+4. Companion.
+5. Location.
+6. Pricing.
+7. Notes.
+8. Confirmation.
+
+Gunakan async operation.
+Disable tombol saat proses berlangsung.
+Hindari double submit.
+
+==================================================
+S. REPORTING
+==================================================
+
+Buat laporan:
+
+1. Booking berdasarkan tanggal.
+2. Booking berdasarkan status.
+3. Booking berdasarkan layanan.
+4. Booking berdasarkan companion.
+5. Pendapatan harian.
+6. Pendapatan bulanan.
+7. Pembayaran belum lunas.
+8. Refund.
+9. Pembatalan.
+10. Pelanggan berulang.
+11. Performa companion.
+12. Rating companion.
+13. Insiden.
+14. Promo.
+15. Audit activity.
+
+Setiap laporan memiliki:
+
+- Date range.
+- Filter.
+- Summary.
+- Detail.
+- Total.
+- Preview.
+- Export Excel.
+- Export PDF.
+- Print.
+
+Pastikan angka laporan berasal dari query database, bukan dari
+perhitungan visual DataGridView.
+
+==================================================
+T. CONFIGURATION
+==================================================
+
+Buat appsettings.json tanpa secret.
+
+Contoh section:
+
+- Database
+- Security
+- Booking
+- Pricing
+- Cancellation
+- FileStorage
+- Logging
+- Backup
+- Application
+
+Secret harus berasal dari:
+
+- Environment variable.
+- Secure local configuration.
+- User secrets untuk development.
+
+Buat validation saat startup.
+Jika konfigurasi penting tidak tersedia, tampilkan pesan yang jelas
+dan hentikan aplikasi secara aman.
+
+==================================================
+U. ERROR HANDLING
+==================================================
+
+Buat exception:
+
+- ValidationException
+- NotFoundException
+- ConflictException
+- AuthorizationException
+- BookingConflictException
+- InvalidBookingTransitionException
+- PaymentException
+- ConfigurationException
+
+Repository tidak boleh menampilkan MessageBox.
+Infrastructure melempar exception terkontrol.
+Application mengubahnya menjadi result yang jelas.
+Presentation menentukan pesan yang ditampilkan.
+
+Log harus menyimpan detail teknis.
+Pengguna hanya menerima pesan yang aman dan dapat dipahami.
+
+==================================================
+V. TESTING
+==================================================
+
+Buat unit test untuk:
+
+- Age validation.
+- Customer blacklist.
+- Booking overlap.
+- Booking state transition.
+- Pricing calculation.
+- Promo calculation.
+- Payment status.
+- Refund limit.
+- Cancellation fee.
+- Permission checking.
+- Rating calculation.
+
+Buat integration test untuk:
+
+- Customer repository.
+- Companion repository.
+- Booking repository.
+- Payment transaction.
+- Concurrent booking confirmation.
+- Audit log creation.
+
+Gunakan database test terpisah.
+Jangan menjalankan test pada database produksi.
+
+==================================================
+W. BACKUP DAN RESTORE
+==================================================
+
+Buat modul backup:
+
+- Manual backup.
+- Backup destination.
+- Timestamp filename.
+- Backup history.
+- Validation.
+- Retention setting.
+
+Restore:
+
+- Hanya SuperAdmin.
+- Wajib konfirmasi ulang.
+- Wajib membuat backup sebelum restore.
+- Semua tindakan dicatat di audit log.
+- Tampilkan progress.
+- Tangani kegagalan secara aman.
+
+==================================================
+X. DOKUMENTASI
+==================================================
+
+Buat:
+
+docs/PRD.md
+docs/ARCHITECTURE.md
+docs/DATABASE.md
+docs/SECURITY.md
+docs/DEVELOPMENT.md
+docs/DEPLOYMENT.md
+docs/USER_GUIDE.md
+docs/TESTING.md
+
+README.md harus memuat:
+
+- Ringkasan aplikasi.
+- Requirement.
+- Cara setup.
+- Cara membuat database.
+- Cara mengatur environment variable.
+- Cara menjalankan migration.
+- Cara menjalankan aplikasi.
+- Cara menjalankan test.
+- Cara build release.
+- Akun development.
+- Troubleshooting.
+
+==================================================
+Y. CARA KERJA YANG WAJIB
+==================================================
+
+Jangan langsung menghasilkan seluruh aplikasi tanpa perencanaan.
+
+Urutan kerja:
+
+STEP 1
+Audit repository dan tampilkan:
+- Struktur saat ini.
+- File yang ada.
+- Risiko.
+- Konflik dependency.
+- Hal yang akan dipertahankan.
+- Hal yang akan diganti.
+
+STEP 2
+Buat implementation plan:
+- Fase.
+- Task.
+- Dependency.
+- File yang dibuat.
+- File yang diubah.
+- Acceptance criteria.
+- Risiko.
+
+STEP 3
+Buat architecture skeleton.
+Pastikan solution berhasil build sebelum lanjut.
+
+STEP 4
+Buat database schema dan migration.
+Validasi foreign key dan index.
+
+STEP 5
+Implement authentication dan authorization.
+
+STEP 6
+Implement master data.
+
+STEP 7
+Implement availability dan booking engine.
+
+STEP 8
+Implement payment.
+
+STEP 9
+Implement operational workflow.
+
+STEP 10
+Implement reporting, audit, backup, dan hardening.
+
+Setelah setiap fase:
+
+1. Jalankan restore.
+2. Jalankan build.
+3. Jalankan test.
+4. Laporkan error.
+5. Perbaiki error.
+6. Tampilkan file yang diubah.
+7. Tampilkan keputusan arsitektur.
+8. Tampilkan acceptance criteria yang sudah lulus.
+9. Jangan lanjut ke fase berikutnya jika build gagal.
+
+==================================================
+Z. FORMAT RESPONS SETIAP FASE
+==================================================
+
+Gunakan format:
+
+# Phase Name
+
+## Repository Audit
+
+## Implementation Plan
+
+## Files Created
+
+## Files Modified
+
+## Database Changes
+
+## Business Rules Implemented
+
+## Security Controls
+
+## Tests Added
+
+## Commands Executed
+
+## Build Result
+
+## Test Result
+
+## Known Limitations
+
+## Acceptance Criteria
+
+## Next Phase
+
+Jangan mengklaim build atau test berhasil jika belum benar-benar
+menjalankan perintahnya.
+
+Jangan menghapus file lama tanpa menjelaskan alasan dan meminta
+persetujuan apabila penghapusan bersifat destruktif.
+
+Mulai sekarang dengan STEP 1: audit repository. Jangan menulis
+seluruh kode aplikasi pada respons pertama.
